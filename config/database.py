@@ -1,42 +1,40 @@
-from fastapi import FastAPI
-from dotenv import dotenv_values
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure
-class database():
+from urllib.parse import quote_plus
+
+class Database:
     def __init__(self):
+        username = quote_plus("thy230200")  # Mã hóa username
+        password = quote_plus("Thy@2304")  # Mã hóa password
+        uri = f"mongodb+srv://{username}:{password}@cluster0.5wunr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+        
         try:
-            self.myClient = MongoClient("mongodb+srv://lequanphat2003:lequanphat20032003@cluster0.plmsqac.mongodb.net/?retryWrites=true&w=majority"
-)
-            self.mydb = self.myClient["adventure-game"]
-            self.collection_name = self.mydb["statistic"]
-            self.is_insert = True
-            print("Connection to MongoDB successfully.")
-        except ConnectionFailure as e:
-            print(f"Connection to MongoDB failed: {e}")
+            self.myClient = MongoClient(uri)
+            self.db = self.myClient["game_db"]  # Thay "game_db" bằng tên database của bạn
+            print("✅ Kết nối MongoDB thành công.")
+        except Exception as e:
+            print(f"❌ Lỗi kết nối MongoDB: {e}")
 
     def get_statistic(self):
-        item_details = self.collection_name.find()
-        return list(item_details)
-        
-    def save_statistic(self,name, score, level, mode):
-        item_details = self.get_statistic()
-        for item in item_details:
-            if item["player_name"] == name and item["mode"] == mode:
-                self.is_insert = False
-                if int(item["score"]) < score:
-                    print("check")
-                    self.collection_name.update_one({"_id": item["_id"]}, {"$set" : {"score" : score , "level" : level}}) 
-        if self.is_insert == True:         
-            self.collection_name.insert_one({
-            "player_name":name,
-            "score":score,
-            "level":level,
-            "mode":mode
-            })
-    def get_ranking(self, mode):
-        pipeline = [
-            {"$match": {"mode": mode}},
-            {"$sort": {"score": -1}},
-        ]
-        ranking = self.collection_name.aggregate(pipeline)
-        return list(ranking)
+        try:
+            collection = self.db["statistics"]  # Thay "statistics" bằng collection của bạn
+            return list(collection.find())
+        except Exception as e:
+            print(f"❌ Lỗi khi lấy dữ liệu: {e}")
+            return []
+
+    def save_statistic(self, player_name, score, level, mode):
+        try:
+            collection = self.db["statistics"]
+            item_details = self.get_statistic()  # Kiểm tra trước khi lưu
+            
+            data = {
+                "player_name": player_name,
+                "score": score,
+                "level": level,
+                "mode": mode
+            }
+            collection.insert_one(data)
+            print("✅ Dữ liệu đã được lưu vào MongoDB.")
+        except Exception as e:
+            print(f"❌ Lỗi khi lưu dữ liệu: {e}")
+
